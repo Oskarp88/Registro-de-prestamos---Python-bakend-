@@ -22,5 +22,5 @@ async def login_user(user_data: UserLogin):
     if not verify_password(user_data.password, user["password"]):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
-    # Login exitoso, puedes crear y devolver JWT aquí si quieres
+    # Login exitoso
     return {"message": "Inicio de sesión exitoso", "user": str(user["_id"])}
