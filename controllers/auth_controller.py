@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from database.connection import get_db
 from models.user_login_model import UserLogin
+from schemas.user_schema import UserResponse
 from utils.hash import verify_password
 
 async def login_user(user_data: UserLogin):
@@ -14,13 +15,24 @@ async def login_user(user_data: UserLogin):
             {"email": user_data.username_or_email}
         ]
     })
-
+    
+    print('username o email: ',user_data.username_or_email)
     if not user:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+        print('no existe: ', user_data.username_or_email)
+        raise HTTPException(status_code=401, detail="Credenciales inválidas: email no existe")
 
     # Verificar password
     if not verify_password(user_data.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+        raise HTTPException(status_code=401, detail="Credenciales inválidas: contraseña incorrecta")
 
     # Login exitoso
-    return {"message": "Inicio de sesión exitoso", "user": str(user["_id"])}
+    print({"message": "Inicio de sesión exitoso", "user": str(user["_id"])})
+    return {"message": "Inicio de sesión exitoso", "user": UserResponse(
+        id=str(user["_id"]),
+        name=user["name"],
+        lastname=user["lastname"],
+        username=user["username"],
+        email=user["email"],
+        isAdmin=False,
+        isActive=False
+    )}
