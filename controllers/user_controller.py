@@ -8,7 +8,6 @@ async def register_user(user: UserCreate):
     db = get_db()
     users_collection = db["users"]
 
-    # Verificar si username o email ya existen
     existing_username = await users_collection.find_one({"username": user.username})
     if existing_username:
         raise HTTPException(status_code=400, detail="Username ya registrado")
@@ -17,16 +16,13 @@ async def register_user(user: UserCreate):
     if existing_email:
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
-    # Preparar usuario para insertar
     user_dict = user.dict()
-    user_dict["password"] = hash_password(user.password)  # 🔒 Hashear el password
+    user_dict["password"] = hash_password(user.password)  
     user_dict["isAdmin"] = False
     user_dict["isActive"] = False
 
-    # Insertar usuario en base de datos
     result = await users_collection.insert_one(user_dict)
 
-    # Crear respuesta sin el password
     response_user = UserResponse(
         id=str(result.inserted_id),
         name=user.name,
@@ -53,11 +49,21 @@ async def register_client(client: ClientCreate):
     if existing_email:
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
-    # Preparar cliente para insertar
     client_dict = client.dict()
 
-    # Insertar cliente en base de datos
     result = await client_collection.insert_one(client_dict)
 
-    # Retornar cliente con _id convertido a string
     return ClientResponse(id=str(result.inserted_id), **client_dict)
+
+async def get_all_clients():
+    db = get_db()
+    client_collection = db["clients"]
+
+    clients_cursor = client_collection.find()
+    clients = []
+    async for client in clients_cursor:
+        client["id"] = str(client["_id"])
+        client.pop("_id")
+        clients.append(ClientResponse(**client))
+
+    return clients
