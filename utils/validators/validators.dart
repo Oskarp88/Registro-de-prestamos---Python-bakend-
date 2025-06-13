@@ -12,6 +12,7 @@ class Validators {
     return null;
   }
 
+
   static String? validatePhoneNumber(String value) {
     if (value.isEmpty) return 'El número es obligatorio';
     if (!RegExp(r'^\d{10}$').hasMatch(value)) return 'Debe tener 10 dígitos';

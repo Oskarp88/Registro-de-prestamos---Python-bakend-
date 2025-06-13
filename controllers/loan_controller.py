@@ -48,3 +48,60 @@ async def get_loan_by_client_id(client_id: str):
     loan["client_id"] = str(loan["client_id"])
 
     return loan
+
+from fastapi import HTTPException
+from database.connection import get_db
+from bson import ObjectId
+from datetime import datetime
+from calendar import monthrange
+
+async def update_interest_payment(client_id: str, paid_interest: float):
+    db = get_db()
+    loans_collection = db["loans"]
+
+    # Verificar si existe préstamo
+    loan = await loans_collection.find_one({"client_id": ObjectId(client_id)})
+
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found for this client")
+
+    current_interest = loan.get("interest", 0)
+    current_due_date_str = loan.get("due_date")
+
+    if not current_due_date_str:
+        raise HTTPException(status_code=400, detail="Loan has no due date set")
+
+    # Convertir dueDate string a datetime
+    current_due_date = datetime.strptime(current_due_date_str, "%Y-%m-%d")
+
+    # Calcular nuevo mes y año
+    new_month = current_due_date.month + 1
+    new_year = current_due_date.year
+
+    if new_month > 12:
+        new_month = 1
+        new_year += 1
+
+    # Validar el día del nuevo mes
+    last_day_of_new_month = monthrange(new_year, new_month)[1]
+    new_day = min(current_due_date.day, last_day_of_new_month)
+
+    # Crear nueva fecha segura
+    new_due_date = current_due_date.replace(year=new_year, month=new_month, day=new_day)
+    new_due_date_str = new_due_date.strftime("%Y-%m-%d")
+
+    # Verificar pago parcial o completo
+    if paid_interest < current_interest:
+        status = "pago parcial"
+        message = "Partial payment recorded successfully"
+    else:
+        status = "pago completado"
+        message = "Full payment recorded successfully"
+
+    # Actualizar loan
+    await loans_collection.update_one(
+        {"client_id": ObjectId(client_id)},
+        {"$set": {"status": status, "due_date": new_due_date_str}}
+    )
+
+    return {"message": message, "new_due_date": new_due_date_str,}
