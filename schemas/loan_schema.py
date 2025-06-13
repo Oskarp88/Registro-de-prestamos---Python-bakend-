@@ -3,9 +3,11 @@ from typing import List, Optional
 from datetime import datetime
 from bson import ObjectId
 
-class PaymentHistoryItem(BaseModel):
+class PaymentHistoryItem(BaseModel):    
     date: datetime
+    total_loan: float
     status: str  # "pendiente", "pagado", "mora", "no pago"
+    due_date: str
     interestPayment: float
     paymentAmount: float
 
@@ -18,3 +20,4 @@ class LoanCreate(BaseModel):
     due_date: str  # fecha donde pagará la primera cuota
     status: str = "pendiente"
     history: List[PaymentHistoryItem] = []
+    interest10: bool = True

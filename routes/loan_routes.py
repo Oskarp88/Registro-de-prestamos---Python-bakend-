@@ -1,7 +1,8 @@
-from controllers.loan_controller import create_loan, get_loan_by_client_id, update_interest_payment
+from controllers.loan_controller import create_loan, get_loan_by_client_id, update_interest_payment, update_payment
 from fastapi import APIRouter
 from schemas.interest_payment_request import InterestPaymentRequest
 from schemas.loan_schema import LoanCreate
+from schemas.payment_amount import PaymentAmount
 
 loans_router = APIRouter()
 
@@ -19,3 +20,8 @@ async def get_loan_by_client_id_route(client_id: str):
 async def pay_interest(payload: InterestPaymentRequest):
     print('client_id: ', payload.client_id, 'paid_interest: ', payload.paid_interest)
     return await update_interest_payment(payload.client_id, payload.paid_interest)
+
+@loans_router.put("/pay_amount")
+async def pay_interest(payload: PaymentAmount):
+    print('client_id: ', payload.client_id, 'payment_amount: ', payload.payment_amount)
+    return await update_payment(payload.client_id, payload.payment_amount)
