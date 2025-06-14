@@ -1,8 +1,13 @@
+from bson import ObjectId
 from fastapi import HTTPException
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate, UserResponse
 from database.connection import get_db
 from utils.hash import hash_password
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 async def register_user(user: UserCreate):
     db = get_db()
@@ -67,3 +72,57 @@ async def get_all_clients():
         clients.append(ClientResponse(**client))
 
     return clients
+
+async def get_client_by_id(client_id: str):
+    db = get_db()
+    client_collection = db["clients"]
+
+    # Verificar el id
+    if not ObjectId.is_valid(client_id):
+        raise HTTPException(status_code=400, detail="ID de cliente inválido.")
+
+    client = await client_collection.find_one({"_id": ObjectId(client_id)})
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+
+    # convertir el id a str
+    client["id"] = str(client["_id"])
+    client.pop("_id")
+
+    return ClientResponse(**client)
+
+async def get_accounts():
+    db = get_db()
+    accounts_collection = db["accounts"]
+    accounts_id= os.getenv("ACCOUNTS_ID")
+    accounts = await accounts_collection.find_one({'_id': ObjectId(accounts_id) })
+
+    return {
+        "capital": accounts["capital"],
+        "admin" : accounts["admin"]
+    }
+
+async def update_accounts(capital: float):
+    db = get_db()
+    accounts_collection = db['accounts']
+
+    await accounts_collection.update_one(
+        {},  # Sin filtro → actualiza el unico documento, solo si hay un solo documento
+        {
+            "$inc": {
+                "capital": capital
+            }
+        }
+    )
+
+    new_capital = await accounts_collection.find_one({})
+
+    if not new_capital:
+       raise HTTPException(status_code=500, detail="No account document found.")
+    
+    return {
+       "message": "Capital agregado con exito",
+       "new_capital": new_capital['capital'],
+       "admin": new_capital['admin']
+    }

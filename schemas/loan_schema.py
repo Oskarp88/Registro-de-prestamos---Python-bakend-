@@ -14,6 +14,7 @@ class PaymentHistoryItem(BaseModel):
 class LoanCreate(BaseModel):
     client_id: str
     total_loan: float
+    name: str
     interest: Optional[float] = None  # se calculará como 15% del total_loan
     payment_amount: Optional[float] = 0.0  # si abona algo
     creation_date: datetime = Field(default_factory=datetime.utcnow)

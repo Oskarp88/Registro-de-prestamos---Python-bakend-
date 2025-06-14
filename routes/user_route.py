@@ -1,6 +1,7 @@
 from typing import List
-from controllers.user_controller import get_all_clients, register_client, register_user
-from fastapi import APIRouter
+from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, register_client, register_user, update_accounts
+from fastapi import APIRouter, Query
+from schemas.capital_schema import CapitalUpdateRequest
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate
 
@@ -19,3 +20,16 @@ async def registerClient(client: ClientCreate):
 @user_router.get("/client/all", response_model=List[ClientResponse])
 async def getClients():
     return await get_all_clients()
+
+@user_router.get("/client")
+async def get_client(client_id: str = Query(..., description="ID del cliente")):
+    return await get_client_by_id(client_id)
+
+@user_router.get("/capital")
+async def getAccounts():
+    return await get_accounts()
+
+@user_router.put("/capital/update")
+async def update_accounts_route(data: CapitalUpdateRequest):
+    new_capital = await update_accounts(data.capital)
+    return new_capital
