@@ -1,5 +1,5 @@
 from typing import List
-from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, register_client, register_user, update_accounts
+from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, get_history_capital, get_history_ganancias, register_client, register_user, search_clients_controller, update_accounts
 from fastapi import APIRouter, Query
 from schemas.capital_schema import CapitalUpdateRequest
 from schemas.client_schema import ClientCreate, ClientResponse
@@ -25,9 +25,21 @@ async def getClients():
 async def get_client(client_id: str = Query(..., description="ID del cliente")):
     return await get_client_by_id(client_id)
 
+@user_router.get("/clients/search", response_model=List[ClientResponse])
+async def search_clients(query: str = Query(..., min_length=1)):
+    return await search_clients_controller(query)
+
 @user_router.get("/capital")
 async def getAccounts():
     return await get_accounts()
+
+@user_router.get("/history-capital")
+async def getHistoryCapital():
+    return await get_history_capital()
+
+@user_router.get("/history-ganancias")
+async def getHistoryGanancias():
+    return await get_history_ganancias()
 
 @user_router.put("/capital/update")
 async def update_accounts_route(data: CapitalUpdateRequest):

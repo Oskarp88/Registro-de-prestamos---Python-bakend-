@@ -1,14 +1,18 @@
 from fastapi import HTTPException
 from database.connection import get_db
+from schemas.historyCapital import HistoryCapitalCreate
+from schemas.historyGanancias import HistoryGananciasCreate
 from schemas.loan_schema import LoanCreate, PaymentHistoryItem
 from bson import ObjectId
 from datetime import datetime, timedelta
-from calendar import monthrange
+from calendar import calendar, monthrange
 
 async def create_loan(loan_data: LoanCreate):
     db = get_db()
     loans_collection = db["loans"]
     clients_collection = db["clients"]
+    accounts_collection = db["acounts"]
+    history_capital_collection = db["historyCapital"]
 
     # Verificar si el cliente existe
     client = await clients_collection.find_one({"_id": ObjectId(loan_data.client_id)})
@@ -31,6 +35,21 @@ async def create_loan(loan_data: LoanCreate):
     loan_dict["history"] = []
 
     result = await loans_collection.insert_one(loan_dict)
+
+    await accounts_collection.update_one({}, {
+        "$inc": {
+            "capital": -loan_data.total_loan,
+        }
+    })
+
+    # Crear registro en historial
+    history_record = HistoryCapitalCreate(
+        amount=loan_data.total_loan,
+        state="prestamo",
+        client_name=loan_data.name 
+    )
+
+    await history_capital_collection.insert_one(history_record.dict())
 
     loan_dict["_id"] = str(result.inserted_id)
     loan_dict["client_id"] = str(loan_dict["client_id"])
@@ -102,6 +121,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
     db = get_db()
     loans_collection = db["loans"]
     accounts_collection = db['accounts']
+    history_ganancias_collection = db['historyGanancias']
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({"client_id": ObjectId(client_id)})
@@ -162,15 +182,24 @@ async def update_interest_payment(client_id: str, paid_interest: float):
         }
     )
 
-    # sumar el interes al capital
+    # sumar el interes a las ganancias
     await accounts_collection.update_one(
         {},  # Sin filtro → actualiza el unico documento, solo si hay un solo documento
         {
             "$inc": {
-                "capital": paid_interest
+                "ganancias": paid_interest
             }
         }
     )
+
+     # Crear registro en historial
+    history_record_ganancias = HistoryGananciasCreate(
+        amount=paid_interest,
+        state="interes",
+        client_name=loan["name"] 
+    )
+
+    await history_ganancias_collection.insert_one(history_record_ganancias.dict())
 
     return {"message": message, "new_due_date": new_due_date_str, "status": status}
  
@@ -178,6 +207,8 @@ async def update_interest_payment(client_id: str, paid_interest: float):
 async def update_payment(client_id: str, payment_amount: float):
     db = get_db()
     loans_collection = db["loans"]
+    accounts_collection = db["acounts"]
+    history_capital_collection = db["historyCapital"]
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({"client_id": ObjectId(client_id)})
@@ -223,6 +254,21 @@ async def update_payment(client_id: str, payment_amount: float):
         }
     )
 
+    await accounts_collection.update_one({}, {
+        "$inc": {
+            "capital": payment_amount,
+        }
+    })
+
+    # Crear registro en historial
+    history_record = HistoryCapitalCreate(
+        amount=payment_amount,
+        state="pago  completado" if new_total_loan == 0 else "pago",
+        client_name= loan["name"]
+    )
+    
+    await history_capital_collection.insert_one(history_record.dict())
+
     return {
         "message": "Payment and history updated successfully",
         "total_loan": new_total_loan,
@@ -234,6 +280,8 @@ async def update_payment(client_id: str, payment_amount: float):
 async def update_full_payment(client_id: str):
     db = get_db()
     loans_collection = db["loans"]
+    accounts_collection = db["acounts"]
+    history_capital_collection = db["historyCapital"]
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({"client_id": ObjectId(client_id)})
@@ -262,6 +310,22 @@ async def update_full_payment(client_id: str):
             }
         }
     )
+
+    await accounts_collection.update_one({}, {
+        "$inc": {
+            "capital": loan["total_loan"],
+            "ganancias": loan["total_loan"] * 0.1
+        }
+    })
+
+    # Crear registro en historial
+    history_record = HistoryCapitalCreate(
+        amount=loan["total_loan"],
+        state="pago todo",
+        client_name= loan["name"]
+    )
+    
+    await history_capital_collection.insert_one(history_record.dict())
 
     updated_loan = await loans_collection.find_one({"client_id": ObjectId(client_id)})
 
@@ -302,3 +366,78 @@ async def get_pending_loans_with_total_interest():
         "total_interest": round(total_interest, 2),
         "pending_loans": pending_loans
     }
+
+#controller para actualizar los datos en loans diariamente
+
+
+# Función principal
+async def update_loans_status():
+
+    db = get_db()
+    loans_collection = db["loans"]
+    print(f"[{datetime.now()}] Ejecutando actualización de préstamos...")
+
+    async for loan in loans_collection.find({}):
+        loan_id = loan["_id"]
+        status = loan["status"]
+        total_loan = loan["total_loan"]
+        due_date_str = loan["due_date"]  # "2025-07-20"
+        day_count = loan.get("day")
+        interest10 = loan.get("interest10", False)
+        creation_date = loan.get("creation_date")
+        due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+        today = datetime.utcnow().date()
+
+        # pendiente
+        if status == "pendiente":
+            day_count -= 1
+            updates = {"day": day_count}
+
+            # ✅ Verificar si interest10 sigue activo y han pasado 16 días desde creation_date
+            if interest10 and creation_date:
+                creation_date_dt = creation_date.date() if isinstance(creation_date, datetime) else datetime.strptime(creation_date, "%Y-%m-%dT%H:%M:%S.%f").date()
+                days_passed = (today - creation_date_dt).days
+                if days_passed >= 16:
+                    updates["interest10"] = False
+
+            # ✅ Si ya pasó la fecha de pago
+            if today > due_date:
+                updates.update({
+                    "status": "En mora",
+                    "interest": round(total_loan * 0.18, 2),
+                    "day": 5
+                })
+
+            # ✅ Solo un update_one al final
+            await loans_collection.update_one(
+                {"_id": ObjectId(loan_id)},
+                {"$set": updates}
+            )
+
+        # Si está en mora
+        elif status == "En mora":
+            if day_count <= 0:
+                # Nueva fecha de pago
+                new_due_date = due_date + timedelta(days=calendar.monthrange(today.year, today.month)[1])
+                new_due_date_str = new_due_date.strftime("%Y-%m-%d")
+
+                # Sumar nuevo interés
+                new_interest = loan["interest"] + round(total_loan * 0.15, 2)
+
+                # Calcular nuevos días
+                new_day_count = (new_due_date - today).days
+
+                await loans_collection.update_one(
+                    {"_id": ObjectId(loan_id)},
+                    {"$set": {
+                        "due_date": new_due_date_str,
+                        "interest": new_interest,
+                        "day": new_day_count
+                    }}
+                )
+            else:
+                # Resta días igual que en pendiente
+                await loans_collection.update_one(
+                    {"_id": ObjectId(loan_id)},
+                    {"$set": {"day": day_count - 1}}
+                )

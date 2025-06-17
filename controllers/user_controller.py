@@ -1,3 +1,5 @@
+import re
+from typing import List
 from bson import ObjectId
 from fastapi import HTTPException
 from schemas.client_schema import ClientCreate, ClientResponse
@@ -92,6 +94,38 @@ async def get_client_by_id(client_id: str):
 
     return ClientResponse(**client)
 
+async def search_clients_controller(query: str) -> List[ClientResponse]:
+    db = get_db()
+    client_collection = db["clients"]
+
+    keywords = query.strip().split()
+
+    if not keywords:
+        raise HTTPException(status_code=400, detail="La consulta de búsqueda no puede estar vacía.")
+
+    conditions = []
+    for word in keywords:
+        regex = re.compile(re.escape(word), re.IGNORECASE)
+        conditions.append({"name": {"$regex": regex}})
+        conditions.append({"lastname": {"$regex": regex}})
+        conditions.append({"phoneNumber": {"$regex": regex}})
+        if word.isdigit():
+            conditions.append({"cedula": int(word)})
+
+    cursor = client_collection.find({"$or": conditions})
+    clients = await cursor.to_list(length=None)
+
+    if not clients:
+        raise HTTPException(status_code=404, detail="No se encontraron clientes con esa búsqueda.")
+
+    result = []
+    for client in clients:
+        client["id"] = str(client["_id"])
+        client.pop("_id")
+        result.append(ClientResponse(**client))
+
+    return result
+
 async def get_accounts():
     db = get_db()
     accounts_collection = db["accounts"]
@@ -100,7 +134,8 @@ async def get_accounts():
 
     return {
         "capital": accounts["capital"],
-        "admin" : accounts["admin"]
+        "admin" : accounts["admin"],
+        "ganancias": accounts["ganancias"]
     }
 
 async def update_accounts(capital: float):
@@ -125,4 +160,42 @@ async def update_accounts(capital: float):
        "message": "Capital agregado con exito",
        "new_capital": new_capital['capital'],
        "admin": new_capital['admin']
+    }
+
+async def get_history_capital():
+    db = get_db()
+    history_collection = db["historyCapital"]
+
+    history_cursor = history_collection.find({})
+    history_list = []
+
+    async for doc in history_cursor:
+        doc["_id"] = str(doc["_id"])
+        history_list.append(doc)
+
+    if not history_list:
+        raise HTTPException(status_code=404, detail="No se encontraron movimientos de capital.")
+
+    return {
+        "total_movimientos": len(history_list),
+        "historial": history_list
+    }
+
+async def get_history_ganancias():
+    db = get_db()
+    history_collection = db["historyGanancias"]
+
+    history_cursor = history_collection.find({})
+    history_list = []
+
+    async for doc in history_cursor:
+        doc["_id"] = str(doc["_id"])
+        history_list.append(doc)
+
+    if not history_list:
+        raise HTTPException(status_code=404, detail="No se encontraron movimientos de ganancias.")
+
+    return {
+        "total_movimientos": len(history_list),
+        "historial": history_list
     }
