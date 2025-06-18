@@ -22,3 +22,4 @@ class LoanCreate(BaseModel):
     status: str = "pendiente"
     history: List[PaymentHistoryItem] = []
     interest10: bool = True
+    day: int = 0

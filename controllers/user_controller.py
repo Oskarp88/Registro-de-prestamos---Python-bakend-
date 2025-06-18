@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate, UserResponse
 from database.connection import get_db
+from utils.constants import Constants
 from utils.hash import hash_password
 from dotenv import load_dotenv
 import os
@@ -13,20 +14,20 @@ load_dotenv()
 
 async def register_user(user: UserCreate):
     db = get_db()
-    users_collection = db["users"]
+    users_collection = db[Constants.USERS]
 
-    existing_username = await users_collection.find_one({"username": user.username})
+    existing_username = await users_collection.find_one({Constants.USERNAME: user.username})
     if existing_username:
         raise HTTPException(status_code=400, detail="Username ya registrado")
 
-    existing_email = await users_collection.find_one({"email": user.email})
+    existing_email = await users_collection.find_one({Constants.EMAIL: user.email})
     if existing_email:
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
     user_dict = user.dict()
-    user_dict["password"] = hash_password(user.password)  
-    user_dict["isAdmin"] = False
-    user_dict["isActive"] = False
+    user_dict[Constants.PASSWORD] = hash_password(user.password)  
+    user_dict[Constants.IS_ADMIN] = False
+    user_dict[Constants.IS_ACTIVE] = False
 
     result = await users_collection.insert_one(user_dict)
 
@@ -44,15 +45,15 @@ async def register_user(user: UserCreate):
 
 async def register_client(client: ClientCreate):
     db = get_db()
-    client_collection = db["clients"]
+    client_collection = db[Constants.CLIENTS]
 
     # Verificar si la cédula ya existe
-    existing_cedula = await client_collection.find_one({"cedula": client.cedula})
+    existing_cedula = await client_collection.find_one({Constants.CEDULA: client.cedula})
     if existing_cedula:
         raise HTTPException(status_code=400, detail="Cédula ya registrada")
 
     # Verificar si el email ya existe
-    existing_email = await client_collection.find_one({"email": client.email})
+    existing_email = await client_collection.find_one({Constants.EMAIL: client.email})
     if existing_email:
         raise HTTPException(status_code=400, detail="Email ya registrado")
 
@@ -64,7 +65,7 @@ async def register_client(client: ClientCreate):
 
 async def get_all_clients():
     db = get_db()
-    client_collection = db["clients"]
+    client_collection = db[Constants.CLIENTS]
 
     clients_cursor = client_collection.find()
     clients = []
@@ -77,7 +78,7 @@ async def get_all_clients():
 
 async def get_client_by_id(client_id: str):
     db = get_db()
-    client_collection = db["clients"]
+    client_collection = db[Constants.CLIENTS]
 
     # Verificar el id
     if not ObjectId.is_valid(client_id):
@@ -96,7 +97,7 @@ async def get_client_by_id(client_id: str):
 
 async def search_clients_controller(query: str) -> List[ClientResponse]:
     db = get_db()
-    client_collection = db["clients"]
+    client_collection = db[Constants.CLIENTS]
 
     keywords = query.strip().split()
 
@@ -106,11 +107,11 @@ async def search_clients_controller(query: str) -> List[ClientResponse]:
     conditions = []
     for word in keywords:
         regex = re.compile(re.escape(word), re.IGNORECASE)
-        conditions.append({"name": {"$regex": regex}})
-        conditions.append({"lastname": {"$regex": regex}})
-        conditions.append({"phoneNumber": {"$regex": regex}})
+        conditions.append({Constants.NAME: {"$regex": regex}})
+        conditions.append({Constants.LASTNAME: {"$regex": regex}})
+        conditions.append({Constants.PHONE_NUMBER: {"$regex": regex}})
         if word.isdigit():
-            conditions.append({"cedula": int(word)})
+            conditions.append({Constants.CEDULA: int(word)})
 
     cursor = client_collection.find({"$or": conditions})
     clients = await cursor.to_list(length=None)
@@ -128,25 +129,25 @@ async def search_clients_controller(query: str) -> List[ClientResponse]:
 
 async def get_accounts():
     db = get_db()
-    accounts_collection = db["accounts"]
-    accounts_id= os.getenv("ACCOUNTS_ID")
+    accounts_collection = db[Constants.ACCOUNTS]
+    accounts_id= os.getenv(Constants.ACCOUNTS_ID)
     accounts = await accounts_collection.find_one({'_id': ObjectId(accounts_id) })
 
     return {
-        "capital": accounts["capital"],
-        "admin" : accounts["admin"],
-        "ganancias": accounts["ganancias"]
+        Constants.CAPITAL: accounts[Constants.CAPITAL],
+        Constants.ADMIN : accounts[Constants.ADMIN],
+        Constants.GANANCIAS: accounts[Constants.GANANCIAS]
     }
 
 async def update_accounts(capital: float):
     db = get_db()
-    accounts_collection = db['accounts']
+    accounts_collection = db[Constants.ACCOUNTS]
 
     await accounts_collection.update_one(
         {},  # Sin filtro → actualiza el unico documento, solo si hay un solo documento
         {
             "$inc": {
-                "capital": capital
+                Constants.CAPITAL: capital
             }
         }
     )
@@ -157,14 +158,14 @@ async def update_accounts(capital: float):
        raise HTTPException(status_code=500, detail="No account document found.")
     
     return {
-       "message": "Capital agregado con exito",
-       "new_capital": new_capital['capital'],
-       "admin": new_capital['admin']
+       Constants.MESSAGE: "Capital agregado con exito",
+       Constants.NEW_CAPITAL: new_capital[Constants.CAPITAL],
+       Constants.ADMIN: new_capital[Constants.ADMIN]
     }
 
 async def get_history_capital():
     db = get_db()
-    history_collection = db["historyCapital"]
+    history_collection = db[Constants.HISTORY_CAPITAL]
 
     history_cursor = history_collection.find({})
     history_list = []
@@ -177,13 +178,13 @@ async def get_history_capital():
         raise HTTPException(status_code=404, detail="No se encontraron movimientos de capital.")
 
     return {
-        "total_movimientos": len(history_list),
-        "historial": history_list
+        Constants.TOTAL_MOVIMIENTOS: len(history_list),
+        Constants.HISTORIAL: history_list
     }
 
 async def get_history_ganancias():
     db = get_db()
-    history_collection = db["historyGanancias"]
+    history_collection = db[Constants.HISTORY_GANANCIAS]
 
     history_cursor = history_collection.find({})
     history_list = []
@@ -196,6 +197,6 @@ async def get_history_ganancias():
         raise HTTPException(status_code=404, detail="No se encontraron movimientos de ganancias.")
 
     return {
-        "total_movimientos": len(history_list),
-        "historial": history_list
+        Constants.TOTAL_MOVIMIENTOS: len(history_list),
+        Constants.HISTORY_GANANCIAS: history_list
     }

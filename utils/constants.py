@@ -49,15 +49,29 @@ class Constants:
     NEW_DUE_DATE = "new_due_date"
     TOTAL_INTEREST = "total_interest"
     PENDING_LOANS = "pending_loans"
+    NEW_CAPITAL = "new_capital"
+    TOTAL_MOVIMIENTOS = "total_movimientos"
+    HISTORIAL = "historial"
 
     #COLLETION DB
+    USERS = "users"
     LOANS = "loans"
     CLIENTS = "clients"
     ACCOUNTS = "acounts"
     HISTORY_CAPITAL= "historyCapital"
+    HISTORY_GANANCIAS = "historyGanancias"
     NOTIFICATIONS =  'notifications'
 
     #STATE
     PRESTAMO = "prestamo"
     PAGO = "pago"
     PAGO_TODO = "pago todo"
+    DEPOSITO = "deposito"
+    RETIRO = "retiro"
+    TRANSFERENCIA_A_GANANCIAS = "transferencia a ganancias"
+    TRANSFERENCIA_A_CAPITAL = "transferencia a capital"
+
+    #.env
+    ACCOUNTS_ID = "ACCOUNTS_ID"
+    MONGO_URL="MONGO_URL"
+    DATABASE_NAME = "DATABASE_NAME"
