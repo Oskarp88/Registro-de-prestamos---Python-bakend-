@@ -5,7 +5,6 @@ class ClientCreate(BaseModel):
     lastname: str
     cedula: int
     phoneNumber: constr(min_length=10, max_length=10, pattern=r'^\d+$') # type: ignore
-    email: EmailStr
     
 
 class ClientResponse(BaseModel):
@@ -14,4 +13,3 @@ class ClientResponse(BaseModel):
     lastname: str
     cedula: int
     phoneNumber: constr(min_length=10, max_length=10, pattern=r'^\d+$') # type: ignore
-    email: EmailStr

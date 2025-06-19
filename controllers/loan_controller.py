@@ -119,6 +119,25 @@ async def get_loan_by_client_id(client_id: str):
 
     return loan
 
+async def get_all_loan_client():
+    db = get_db()
+    loans_collection = db[Constants.LOANS]
+
+    cursor = loans_collection.find({}) 
+
+    loanList = []
+    async for loan in cursor:
+        if loan[Constants.TOTAL_LOAN] != 0:
+            loan["_id"] = str(loan["_id"])
+            loan[Constants.CLIENT_ID] = str(loan[Constants.CLIENT_ID])
+            loanList.append(loan)
+
+    if not loanList:
+        raise HTTPException(status_code=404, detail="No se encontraron préstamos.")
+
+    return loanList
+
+
 
 async def update_interest_payment(client_id: str, paid_interest: float):
     db = get_db()
@@ -371,7 +390,7 @@ async def get_pending_loans_with_total_interest():
     return {
         Constants.TOTAL_LOAN: round(total_loan, 2),
         Constants.TOTAL_INTEREST: round(total_interest, 2),
-        Constants.PENDING_LOANS: pending_loans
+        Constants.PENDING_LOANS: pending_loans,
     }
 
 #controller para actualizar los datos en loans diariamente

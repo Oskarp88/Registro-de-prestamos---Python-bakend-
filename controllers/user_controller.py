@@ -52,11 +52,6 @@ async def register_client(client: ClientCreate):
     if existing_cedula:
         raise HTTPException(status_code=400, detail="Cédula ya registrada")
 
-    # Verificar si el email ya existe
-    existing_email = await client_collection.find_one({Constants.EMAIL: client.email})
-    if existing_email:
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-
     client_dict = client.dict()
 
     result = await client_collection.insert_one(client_dict)
@@ -130,12 +125,16 @@ async def search_clients_controller(query: str) -> List[ClientResponse]:
 async def get_accounts():
     db = get_db()
     accounts_collection = db[Constants.ACCOUNTS]
-    accounts_id= os.getenv(Constants.ACCOUNTS_ID)
-    accounts = await accounts_collection.find_one({'_id': ObjectId(accounts_id) })
+    accounts_id = os.getenv(Constants.ACCOUNTS_ID)
+    
+    accounts = await accounts_collection.find_one({'_id': ObjectId(accounts_id)})
+
+    if accounts is None:
+        raise HTTPException(status_code=404, detail=f"No se encontraron cuentas con ese ID: {accounts_id}.")
 
     return {
         Constants.CAPITAL: accounts[Constants.CAPITAL],
-        Constants.ADMIN : accounts[Constants.ADMIN],
+        Constants.ADMIN: accounts[Constants.ADMIN],
         Constants.GANANCIAS: accounts[Constants.GANANCIAS]
     }
 

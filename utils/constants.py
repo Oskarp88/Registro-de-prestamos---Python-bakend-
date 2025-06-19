@@ -35,7 +35,7 @@ class Constants:
     DEUDA_COMPLETA_PAGADA = 'Deuda completa pagada'
     INTERES_PAGADO = 'Interes pagado'
     DEUDA_FINALIZADA = 'Deuda finalizada'
-    ABONO = ' Abono'
+    ABONO = 'Abono'
     PENDIENTE= 'Pendiente'
     EN_MORA = "En mora"
    
@@ -48,6 +48,7 @@ class Constants:
     LOAN = "loan"
     NEW_DUE_DATE = "new_due_date"
     TOTAL_INTEREST = "total_interest"
+    PENDING_LOANS_INTEREST = "pending_loans_interest"
     PENDING_LOANS = "pending_loans"
     NEW_CAPITAL = "new_capital"
     TOTAL_MOVIMIENTOS = "total_movimientos"
@@ -57,7 +58,7 @@ class Constants:
     USERS = "users"
     LOANS = "loans"
     CLIENTS = "clients"
-    ACCOUNTS = "acounts"
+    ACCOUNTS = "accounts"
     HISTORY_CAPITAL= "historyCapital"
     HISTORY_GANANCIAS = "historyGanancias"
     NOTIFICATIONS =  'notifications'
