@@ -12,7 +12,6 @@ DATABASE_NAME = os.getenv(Constants.DATABASE_NAME)
 client = motor.motor_asyncio.AsyncIOMotorClient(
     MONGO_URL,
     tls=True,
-    tlsAllowInvalidCertificates=True
 )
 
 database = client[DATABASE_NAME]
