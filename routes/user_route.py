@@ -3,7 +3,7 @@ from typing import List
 from bson import ObjectId
 from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, get_history_capital, get_history_ganancias, register_client, register_user, search_clients_controller, update_accounts
 from fastapi import APIRouter, HTTPException, Query
-from database.connection import get_db
+from database.connection import database
 from schemas.capital_schema import CapitalUpdateRequest
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate
@@ -53,7 +53,7 @@ async def update_accounts_route(data: CapitalUpdateRequest):
 
 @user_router.post("/notifications/mark_read/{user_id}")
 async def mark_notifications_read(user_id: str):
-    db = get_db()
+    db = database
     notifications_collection = db[Constants.NOTIFICATIONS]
 
     result = await notifications_collection.update_many(
@@ -69,7 +69,7 @@ async def mark_notifications_read(user_id: str):
 
 @user_router.get("/notifications/{user_id}")
 async def get_notifications(user_id: str):
-    db = get_db()
+    db = database
     users_collection = db[Constants.USERS]
     notifications_collection = db[Constants.NOTIFICATIONS]
 

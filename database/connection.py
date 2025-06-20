@@ -22,5 +22,3 @@ client = motor.motor_asyncio.AsyncIOMotorClient(
 
 database = client[DATABASE_NAME]
 
-def get_db():
-    return database

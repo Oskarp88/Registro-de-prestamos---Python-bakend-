@@ -1,14 +1,14 @@
 from fastapi import HTTPException
 from bson import ObjectId
 
-from database.connection import get_db
+from database.connection import database
 from schemas.historyCapital import HistoryCapitalCreate
 from schemas.historyGanancias import HistoryGananciasCreate
 from utils.constants import Constants
 
 # Agregar capital
 async def add_capital(amount: float):
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
 
@@ -35,7 +35,7 @@ async def add_capital(amount: float):
     }
 # Retirar ganancias
 async def withdraw_ganancias(amount: float):
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
     history_ganancias_collection = db[Constants.HISTORY_CAPITAL]
 
@@ -61,7 +61,7 @@ async def withdraw_ganancias(amount: float):
 
 # Transferir de capital a ganancias
 async def transfer_capital_to_ganancias(amount: float):
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
     history_ganancias_collection = db[Constants.HISTORY_GANANCIAS]
@@ -104,7 +104,7 @@ async def transfer_capital_to_ganancias(amount: float):
 
 # Transferir de ganancias a capital
 async def transfer_ganancias_to_capital(amount: float):
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
     history_ganancias_collection = db[Constants.HISTORY_GANANCIAS]

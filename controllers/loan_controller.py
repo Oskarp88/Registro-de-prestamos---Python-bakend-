@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from database.connection import get_db
+from database.connection import database
 from schemas.historyCapital import HistoryCapitalCreate
 from schemas.historyGanancias import HistoryGananciasCreate
 from schemas.loan_schema import LoanCreate, PaymentHistoryItem
@@ -13,7 +13,7 @@ from utils.constants import Constants
 from websocket_manager.events import notify_latest_notifications
 
 async def create_loan(loan_data: LoanCreate):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     clients_collection = db[Constants.CLIENTS]
     accounts_collection = db[Constants.ACCOUNTS]
@@ -73,7 +73,7 @@ async def create_loan(loan_data: LoanCreate):
     return loan_dict
 
 async def update_loan(loan_data: LoanCreate):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     clients_collection = db[Constants.CLIENTS]
     notifications_collection = db[Constants.NOTIFICATIONS]
@@ -129,7 +129,7 @@ async def update_loan(loan_data: LoanCreate):
 
 
 async def get_loan_by_client_id(client_id: str):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
 
     loan = await loans_collection.find_one({Constants.CLIENT_ID: ObjectId(client_id)})
@@ -143,7 +143,7 @@ async def get_loan_by_client_id(client_id: str):
     return loan
 
 async def get_all_loan_client():
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
 
     cursor = loans_collection.find({}) 
@@ -163,7 +163,7 @@ async def get_all_loan_client():
 
 
 async def update_interest_payment(client_id: str, paid_interest: float):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_ganancias_collection = db[Constants.HISTORY_CAPITAL]
@@ -266,7 +266,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
  
 
 async def update_payment(client_id: str, payment_amount: float):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
@@ -359,7 +359,7 @@ async def update_payment(client_id: str, payment_amount: float):
     }
   
 async def update_full_payment(client_id: str):
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
@@ -432,7 +432,7 @@ async def update_full_payment(client_id: str):
 
 async def get_pending_loans_with_total_interest(): 
     
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
 
     # todos los préstamos con estado 'pendiente'
@@ -468,7 +468,7 @@ async def get_pending_loans_with_total_interest():
 # Función principal
 async def update_loans_status():
 
-    db = get_db()
+    db = database
     loans_collection = db[Constants.LOANS]
     notifications_collection = db[Constants.NOTIFICATIONS]
     print(f"[{datetime.now()}] Ejecutando actualización de préstamos...")

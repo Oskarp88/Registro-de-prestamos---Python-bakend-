@@ -5,12 +5,12 @@ from bson import ObjectId
 from fastapi import HTTPException
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate, UserResponse
-from database.connection import get_db
+from database.connection import database
 from utils.constants import Constants
 from utils.hash import hash_password
 
 async def register_user(user: UserCreate):
-    db = get_db()
+    db = database
     users_collection = db[Constants.USERS]
 
     existing_username = await users_collection.find_one({Constants.USERNAME: user.username})
@@ -44,7 +44,7 @@ async def register_user(user: UserCreate):
     return response_user
 
 async def register_client(client: ClientCreate):
-    db = get_db()
+    db = database
     client_collection = db[Constants.CLIENTS]
 
     # Verificar si la cédula ya existe
@@ -59,7 +59,7 @@ async def register_client(client: ClientCreate):
     return ClientResponse(id=str(result.inserted_id), **client_dict)
 
 async def get_all_clients():
-    db = get_db()
+    db = database
     client_collection = db[Constants.CLIENTS]
 
     clients_cursor = client_collection.find()
@@ -72,7 +72,7 @@ async def get_all_clients():
     return clients
 
 async def get_client_by_id(client_id: str):
-    db = get_db()
+    db = database
     client_collection = db[Constants.CLIENTS]
 
     # Verificar el id
@@ -91,7 +91,7 @@ async def get_client_by_id(client_id: str):
     return ClientResponse(**client)
 
 async def search_clients_controller(query: str) -> List[ClientResponse]:
-    db = get_db()
+    db = database
     client_collection = db[Constants.CLIENTS]
 
     keywords = query.strip().split()
@@ -123,7 +123,7 @@ async def search_clients_controller(query: str) -> List[ClientResponse]:
     return result
 
 async def get_accounts():
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
     
     accounts = await accounts_collection.find_one({})
@@ -138,7 +138,7 @@ async def get_accounts():
     }
 
 async def update_accounts(capital: float):
-    db = get_db()
+    db = database
     accounts_collection = db[Constants.ACCOUNTS]
 
     await accounts_collection.update_one(
@@ -162,7 +162,7 @@ async def update_accounts(capital: float):
     }
 
 async def get_history_capital():
-    db = get_db()
+    db = database
     history_collection = db[Constants.HISTORY_CAPITAL]
 
     history_cursor = history_collection.find({})
@@ -181,7 +181,7 @@ async def get_history_capital():
     }
 
 async def get_history_ganancias():
-    db = get_db()
+    db = database
     history_collection = db[Constants.HISTORY_GANANCIAS]
 
     history_cursor = history_collection.find({})
