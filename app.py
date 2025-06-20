@@ -35,7 +35,9 @@ async def startup_event():
     scheduler.start()
     print("✅ Scheduler iniciado correctamente")
 
-
+@app.get("/")
+def root():
+    return {"message": "🚀 API de Préstamos activa"}
 
 if os.getenv("ENV") != "production":
     import uvicorn
