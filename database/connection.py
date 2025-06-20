@@ -4,13 +4,17 @@ if os.getenv("ENV") != "production":
     from dotenv import load_dotenv
     load_dotenv()
 
-
 from utils.constants import Constants
 
 MONGO_URL = os.getenv(Constants.MONGO_URL)
 DATABASE_NAME = os.getenv(Constants.DATABASE_NAME)
 
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
+client = motor.motor_asyncio.AsyncIOMotorClient(
+    MONGO_URL,
+    tls=True,
+    tlsAllowInvalidCertificates=True
+)
+
 database = client[DATABASE_NAME]
 
 def get_db():
