@@ -1,8 +1,9 @@
 import motor.motor_asyncio
+import os
 if os.getenv("ENV") != "production":
     from dotenv import load_dotenv
     load_dotenv()
-import os
+
 
 from utils.constants import Constants
 

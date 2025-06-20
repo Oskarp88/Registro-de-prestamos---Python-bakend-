@@ -4,6 +4,7 @@ from controllers.loan_controller import update_loans_status
 from routes.routes import api_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from websocket_manager.router_socket import ws_router
+import os
 
 
 app = FastAPI(
@@ -34,6 +35,11 @@ async def startup_event():
     scheduler.start()
     print("✅ Scheduler iniciado correctamente")
 
-if __name__ == "__main__":
+
+
+if os.getenv("ENV") != "production":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
+    if __name__ == "__main__":
+        uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True)
+
