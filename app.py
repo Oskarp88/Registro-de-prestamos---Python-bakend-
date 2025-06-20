@@ -1,4 +1,3 @@
-import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from controllers.loan_controller import update_loans_status

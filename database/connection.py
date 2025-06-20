@@ -1,10 +1,10 @@
 import motor.motor_asyncio
-from dotenv import load_dotenv
+if os.getenv("ENV") != "production":
+    from dotenv import load_dotenv
+    load_dotenv()
 import os
 
 from utils.constants import Constants
-
-load_dotenv()
 
 MONGO_URL = os.getenv(Constants.MONGO_URL)
 DATABASE_NAME = os.getenv(Constants.DATABASE_NAME)

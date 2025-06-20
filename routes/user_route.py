@@ -2,7 +2,7 @@ from typing import List
 
 from bson import ObjectId
 from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, get_history_capital, get_history_ganancias, register_client, register_user, search_clients_controller, update_accounts
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from database.connection import get_db
 from schemas.capital_schema import CapitalUpdateRequest
 from schemas.client_schema import ClientCreate, ClientResponse

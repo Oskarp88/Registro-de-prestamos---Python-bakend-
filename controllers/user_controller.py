@@ -8,10 +8,6 @@ from schemas.user_schema import UserCreate, UserResponse
 from database.connection import get_db
 from utils.constants import Constants
 from utils.hash import hash_password
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 async def register_user(user: UserCreate):
     db = get_db()
@@ -129,12 +125,11 @@ async def search_clients_controller(query: str) -> List[ClientResponse]:
 async def get_accounts():
     db = get_db()
     accounts_collection = db[Constants.ACCOUNTS]
-    accounts_id = os.getenv(Constants.ACCOUNTS_ID)
     
-    accounts = await accounts_collection.find_one({'_id': ObjectId(accounts_id)})
+    accounts = await accounts_collection.find_one({})
 
     if accounts is None:
-        raise HTTPException(status_code=404, detail=f"No se encontraron cuentas con ese ID: {accounts_id}.")
+        raise HTTPException(status_code=404, detail=f"No se encontraron cuentas con ese ID.")
 
     return {
         Constants.CAPITAL: accounts[Constants.CAPITAL],
