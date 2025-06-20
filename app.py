@@ -25,13 +25,16 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(ws_router)
 
-# Inicializar scheduler global
 scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 async def startup_event():
-    # Aquí ya hay un event loop activo
-    scheduler.add_job(update_loans_status, 'cron', hour='19', minute='10') 
+    # Job liviano para "mantener vivo" el servidor cada 15 min
+    scheduler.add_job(lambda: print("🟢 Reactivando servidor..."), 'interval', minutes=15)
+
+    # Job pesado para update de préstamos cada 6 horas
+    scheduler.add_job(update_loans_status, 'interval', hours=6)
+
     scheduler.start()
     print("✅ Scheduler iniciado correctamente")
 

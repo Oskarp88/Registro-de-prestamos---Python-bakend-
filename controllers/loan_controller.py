@@ -214,7 +214,8 @@ async def update_interest_payment(client_id: str, paid_interest: float):
         {
             "$set": {
                 Constants.STATUS: status, 
-                Constants.DUE_DATE: new_due_date_str
+                Constants.DUE_DATE: new_due_date_str,
+                Constants.INTEREST_10: False
             },
             "$push": {
                 Constants.HISTORY: {
@@ -343,8 +344,8 @@ async def update_payment(client_id: str, payment_amount: float):
         )
 
     notifications_record = Notifications(
-            message=message,
-            client_id=client_id
+        message=message,
+        client_id=client_id
     )
     
     await notifications_collection.insert_one(notifications_record.dict())
@@ -505,8 +506,9 @@ async def update_loans_status():
                     await notifications_collection.insert_one(notifications_record.dict())
                     await notify_latest_notifications()
                 if days_passed >= 21:
+                    new_interest = round(loan_interest + (total_loan * 0.03), 2)
                     updates.update({
-                        Constants.INTEREST: round(total_loan * 0.18, 2),
+                        Constants.INTEREST: new_interest,
                         Constants.DAY: 5
                     })                
                     notifications_record = Notifications(
@@ -554,13 +556,13 @@ async def update_loans_status():
                 # Calcular nuevos días
                 new_day_count = (new_due_date - today).days
 
-                notifications_record = notifications_collection(
+                notifications_record = Notifications(
                     message=(
                         f"El cliente {loan_name} no realizó el pago del interés de {format_currency_value(loan_interest)} "
                         f"dentro del plazo adicional de 5 días. Este monto ha sido acumulado al nuevo interés, resultando en un total a pagar "
                         f"de {format_currency_value(new_interest)}. La nueva fecha límite para realizar el pago es {new_due_date}."
                     ),
-                    client_name=loan_client_id
+                    client_id=loan_client_id
                 )
                 await notifications_collection.insert_one(notifications_record.dict())
                 await notify_latest_notifications()
@@ -585,7 +587,7 @@ async def update_loans_status():
                         f"El cliente {loan_name} continúa en estado de mora. Le restan {day_count - 1} días para realizar el pago del interés "
                         f"correspondiente, por un monto de {format_currency_value(loan_interest)}."
                     ),
-                    client_name=loan_client_id
+                    client_id=loan_client_id
                 )
                 await notifications_collection.insert_one(notifications_record.dict())
                 await notify_latest_notifications()
