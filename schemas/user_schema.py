@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
     name: str
@@ -8,6 +9,7 @@ class UserCreate(BaseModel):
     password: str
     isAdmin: bool = False
     isActive: bool = False
+    creation_date: datetime = Field(default_factory=datetime.utcnow)
 
 class UserResponse(BaseModel):
     id: str
@@ -17,4 +19,5 @@ class UserResponse(BaseModel):
     email: EmailStr
     isAdmin: bool
     isActive: bool
+    creation_date: datetime
 

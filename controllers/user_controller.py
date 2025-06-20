@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 from typing import List
 from bson import ObjectId
@@ -28,17 +29,20 @@ async def register_user(user: UserCreate):
     user_dict[Constants.PASSWORD] = hash_password(user.password)  
     user_dict[Constants.IS_ADMIN] = False
     user_dict[Constants.IS_ACTIVE] = False
+    user_dict[Constants.CREATION_DATE] = datetime.utcnow()
 
     result = await users_collection.insert_one(user_dict)
+    new_user = await users_collection.find_one({"_id": result.inserted_id})
 
     response_user = UserResponse(
-        id=str(result.inserted_id),
-        name=user.name,
-        lastname=user.lastname,
-        username=user.username,
-        email=user.email,
-        isAdmin=False,
-        isActive=False
+        id=str(new_user["_id"]),
+        name=new_user[Constants.NAME],
+        lastname=new_user[Constants.LASTNAME],
+        username=new_user[Constants.USERNAME],
+        email=new_user[Constants.EMAIL],  
+        isAdmin=new_user[Constants.IS_ADMIN],
+        isActive=new_user[Constants.IS_ACTIVE],
+        creation_date=new_user[Constants.CREATION_DATE],
     )
 
     return response_user

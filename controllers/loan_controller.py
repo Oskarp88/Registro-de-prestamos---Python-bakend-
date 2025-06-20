@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 from calendar import calendar, monthrange
 
 from schemas.notifications import Notifications
-from utils import format_currency_value
+from utils.format_currency_value import format_currency_value
 from utils.constants import Constants
+from websocket_manager.events import notify_latest_notifications
 
 async def create_loan(loan_data: LoanCreate):
     db = get_db()
@@ -17,6 +18,7 @@ async def create_loan(loan_data: LoanCreate):
     clients_collection = db[Constants.CLIENTS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
+    notifications_collection = db[Constants.NOTIFICATIONS]
 
     # Verificar si el cliente existe
     client = await clients_collection.find_one({"_id": ObjectId(loan_data.client_id)})
@@ -58,12 +60,23 @@ async def create_loan(loan_data: LoanCreate):
     loan_dict["_id"] = str(result.inserted_id)
     loan_dict[Constants.CLIENT_ID] = str(loan_dict[Constants.CLIENT_ID])
 
+    notifications_record = Notifications(
+        message=(
+            f"Se ha otorgado al cliente {loan_data.name} un préstamo por un monto de {format_currency_value(loan_data.total_loan)}."
+        ),
+        client_id=loan_data.client_id
+    )
+
+    await notifications_collection.insert_one(notifications_record.dict())
+    await notify_latest_notifications()
+
     return loan_dict
 
 async def update_loan(loan_data: LoanCreate):
     db = get_db()
     loans_collection = db[Constants.LOANS]
     clients_collection = db[Constants.CLIENTS]
+    notifications_collection = db[Constants.NOTIFICATIONS]
 
     # Verificar si el cliente existe
     client = await clients_collection.find_one({"_id": ObjectId(loan_data.client_id)})
@@ -98,6 +111,16 @@ async def update_loan(loan_data: LoanCreate):
     # antes de retornar hay que convertis de _id a string
     updated_loan["_id"] = str(updated_loan["_id"])
     updated_loan[Constants.CLIENT_ID] = str(updated_loan[Constants.CLIENT_ID])
+
+    notifications_record = Notifications(
+        message=(
+            f"Se ha otorgado al cliente {loan_data.name} un préstamo por un monto de {format_currency_value(loan_data.total_loan)}."
+        ),
+        client_id=loan_data.client_id
+    )
+
+    await notifications_collection.insert_one(notifications_record.dict())
+    await notify_latest_notifications()
 
     return {
         Constants.MESSAGE: "Préstamo actualizado exitosamente",
@@ -144,6 +167,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_ganancias_collection = db[Constants.HISTORY_CAPITAL]
+    notifications_collection = db[Constants.NOTIFICATIONS]
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({Constants.CLIENT_ID: ObjectId(client_id)})
@@ -223,6 +247,17 @@ async def update_interest_payment(client_id: str, paid_interest: float):
 
     await history_ganancias_collection.insert_one(history_record_ganancias.dict())
 
+    notifications_record = Notifications(
+        message=(
+            f"El cliente {loan[Constants.NAME]} ha realizado el pago del interés correspondiente por un monto de {format_currency_value(paid_interest)}. "
+            f"La próxima fecha de pago de interés será el {new_due_date_str}."
+        ),
+        client_id=client_id
+    )
+
+    await notifications_collection.insert_one(notifications_record.dict())
+    await notify_latest_notifications()
+
     return {
         Constants.MESSAGE: message, 
         Constants.NEW_DUE_DATE: new_due_date_str, 
@@ -235,6 +270,8 @@ async def update_payment(client_id: str, payment_amount: float):
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
+    notifications_collection = db[Constants.NOTIFICATIONS]
+
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({Constants.CLIENT_ID: ObjectId(client_id)})
@@ -294,6 +331,25 @@ async def update_payment(client_id: str, payment_amount: float):
     
     await history_capital_collection.insert_one(history_record.dict())
 
+    if new_total_loan == 0:
+        message = (
+            f"El cliente {loan[Constants.NAME]} ha realizado un abono de {format_currency_value(payment_amount)} "
+            f"y ha completado el pago total de su deuda."
+        )
+    else:
+        message = (
+            f"El cliente {loan[Constants.NAME]} ha realizado un abono de {format_currency_value(payment_amount)} "
+            f"al saldo pendiente de su deuda."
+        )
+
+    notifications_record = Notifications(
+            message=message,
+            client_id=client_id
+    )
+    
+    await notifications_collection.insert_one(notifications_record.dict())
+    await notify_latest_notifications()
+
     return {
         Constants.MESSAGE: "Payment and history updated successfully",
         Constants.TOTAL_LOAN: new_total_loan,
@@ -307,6 +363,7 @@ async def update_full_payment(client_id: str):
     loans_collection = db[Constants.LOANS]
     accounts_collection = db[Constants.ACCOUNTS]
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
+    notifications_collection = db[Constants.NOTIFICATIONS]
 
     # Verificar si existe préstamo
     loan = await loans_collection.find_one({Constants.CLIENT_ID: ObjectId(client_id)})
@@ -354,6 +411,18 @@ async def update_full_payment(client_id: str):
     await history_capital_collection.insert_one(history_record.dict())
 
     updated_loan = await loans_collection.find_one({Constants.CLIENT_ID: ObjectId(client_id)})
+
+    notifications_record = Notifications(
+        message=(
+            f"El cliente {loan[Constants.NAME]} aprovechó el período de los primeros 15 días y saldó la totalidad de su deuda "
+            f"con un interés preferencial del 10%. Pagó {format_currency_value(loan[Constants.TOTAL_LOAN])} de capital "
+            f"más {format_currency_value(loan[Constants.TOTAL_LOAN] * 0.1)} de interés."
+        ),
+        client_id=client_id
+    )
+
+    await notifications_collection.insert_one(notifications_record.dict())
+    await notify_latest_notifications()
 
     return {
         Constants.MESSAGE: "Pago procesado exitoso", 
@@ -430,20 +499,25 @@ async def update_loans_status():
                 if interest10 and days_passed >= 16:
                     updates[Constants.INTEREST_10] = False
                     notifications_record = Notifications(
-                        message=f"El cliente {loan_name} ya paso por los primero 15 dias desde que obtuvo el prestamo, por lo tanto ya no aplica el interés del 10%",
-                        client_id= loan_client_id  
-                    )   
+                        message=f"El cliente {loan_name} ha superado los primeros 15 días desde la fecha de otorgamiento del préstamo. A partir de este momento, ya no aplica el interés preferencial del 10%.",
+                        client_id=loan_client_id
+                    )
                     await notifications_collection.insert_one(notifications_record.dict())
+                    await notify_latest_notifications()
                 if days_passed >= 21:
                     updates.update({
                         Constants.INTEREST: round(total_loan * 0.18, 2),
                         Constants.DAY: 5
                     })                
                     notifications_record = Notifications(
-                        message=f"El cliente {loan_name} ya tiene 20 dias y no ha pagado el interes, el interés subio al 18% y tiene que pagar {format_currency_value(total_loan * 0.18)} de interés.",
-                        client_id= loan_client_id  
+                        message=(
+                            f"El cliente {loan_name} ha alcanzado los 20 días sin realizar el pago del interés. "
+                            f"Como resultado, la tasa de interés ha aumentado al 18%. El monto a pagar por concepto de interés es de {format_currency_value(total_loan * 0.18)}."
+                        ),
+                        client_id=loan_client_id
                     )   
                     await notifications_collection.insert_one(notifications_record.dict())
+                    await notify_latest_notifications()
             # ✅ Si ya pasó la fecha de pago
             if today > due_date:
                 updates.update({
@@ -451,11 +525,16 @@ async def update_loans_status():
                     Constants.DAY: 5
                 })
 
-                notifications_record =  Notifications(
-                    message=f"El cliente {loan_name} entro en mora, no ha pagado su interes de {format_currency_value(loan_interest)}, tiene 5 dias apartir de hoy para poder pagar.",
-                    client_id= loan_client_id  
-                ) 
+                notifications_record = Notifications(
+                    message=(
+                        f"El cliente {loan_name} ha incurrido en mora al no realizar el pago del interés correspondiente, "
+                        f"por un monto de {format_currency_value(loan_interest)}. "
+                        f"Cuenta con un plazo de 5 días a partir de hoy para regularizar su situación."
+                    ),
+                    client_id=loan_client_id
+                )
                 await notifications_collection.insert_one(notifications_record.dict())
+                await notify_latest_notifications()
             # ✅ Solo un update_one al final
             await loans_collection.update_one(
                 {"_id": ObjectId(loan_id)},
@@ -476,10 +555,15 @@ async def update_loans_status():
                 new_day_count = (new_due_date - today).days
 
                 notifications_record = notifications_collection(
-                    message=f"El cliente {loan_name} se le vencieron los 5 dias extra y no pago el interes de {format_currency_value(loan_interest)}, ese interes fue sumado al nuevo interes y tendra que pagar el siguiente interes de {format_currency_value(new_interest)} y su nueva fecha limite para pagar es {new_due_date}.",
-                    client_name= loan_client_id  
-                ) 
+                    message=(
+                        f"El cliente {loan_name} no realizó el pago del interés de {format_currency_value(loan_interest)} "
+                        f"dentro del plazo adicional de 5 días. Este monto ha sido acumulado al nuevo interés, resultando en un total a pagar "
+                        f"de {format_currency_value(new_interest)}. La nueva fecha límite para realizar el pago es {new_due_date}."
+                    ),
+                    client_name=loan_client_id
+                )
                 await notifications_collection.insert_one(notifications_record.dict())
+                await notify_latest_notifications()
                 await loans_collection.update_one(
                     {"_id": ObjectId(loan_id)},
                     {"$set": {
@@ -497,7 +581,11 @@ async def update_loans_status():
                 )
 
                 notifications_record = Notifications(
-                    message=f"El cliente {loan_name} sigue en mora, le quedan {day_count - 1} para pagar el interes de {format_currency_value(loan_interest)}.",
-                    client_name= loan_client_id  
-                ) 
+                    message=(
+                        f"El cliente {loan_name} continúa en estado de mora. Le restan {day_count - 1} días para realizar el pago del interés "
+                        f"correspondiente, por un monto de {format_currency_value(loan_interest)}."
+                    ),
+                    client_name=loan_client_id
+                )
                 await notifications_collection.insert_one(notifications_record.dict())
+                await notify_latest_notifications()

@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from controllers.loan_controller import update_loans_status
 from routes.routes import api_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from websocket_manager.router_socket import ws_router
+
 
 app = FastAPI(
     title="API de Préstamos",
@@ -21,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(ws_router)
 
 # Inicializar scheduler global
 scheduler = AsyncIOScheduler()

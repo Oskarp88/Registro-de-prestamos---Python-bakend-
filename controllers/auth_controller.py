@@ -41,6 +41,7 @@ async def login_user(user_data: UserLogin):
             lastname=user[Constants.LASTNAME],
             username=user[Constants.USERNAME],
             email=user[Constants.EMAIL],
+            creation_date=user[Constants.CREATION_DATE],
             isAdmin=user[Constants.IS_ADMIN],
             isActive=user[Constants.IS_ACTIVE]
         )

@@ -1,9 +1,14 @@
 from typing import List
+
+from bson import ObjectId
 from controllers.user_controller import get_accounts, get_all_clients, get_client_by_id, get_history_capital, get_history_ganancias, register_client, register_user, search_clients_controller, update_accounts
 from fastapi import APIRouter, Query
+from database.connection import get_db
 from schemas.capital_schema import CapitalUpdateRequest
 from schemas.client_schema import ClientCreate, ClientResponse
 from schemas.user_schema import UserCreate
+from utils.constants import Constants
+from utils.erialize_notifications import serialize_notifications
 
 user_router = APIRouter()
 
@@ -45,3 +50,61 @@ async def getHistoryGanancias():
 async def update_accounts_route(data: CapitalUpdateRequest):
     new_capital = await update_accounts(data.capital)
     return new_capital
+
+@user_router.post("/notifications/mark_read/{user_id}")
+async def mark_notifications_read(user_id: str):
+    db = get_db()
+    notifications_collection = db[Constants.NOTIFICATIONS]
+
+    result = await notifications_collection.update_many(
+        {
+            "read_by": {"$ne": user_id}  # si NO lo ha leído este usuario
+        },
+        {
+            "$addToSet": {"read_by": user_id}  # agrégalo sin duplicar
+        }
+    )
+
+    return {"modified_count": result.modified_count}
+
+@user_router.get("/notifications/{user_id}")
+async def get_notifications(user_id: str):
+    db = get_db()
+    users_collection = db[Constants.USERS]
+    notifications_collection = db[Constants.NOTIFICATIONS]
+
+    # Obtener usuario y su fecha de creación
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    user_creation_date = user.get("creation_date")
+    if not user_creation_date:
+        raise HTTPException(status_code=400, detail="Usuario sin fecha de creación")
+
+    # Solo notificaciones posteriores a la creación del usuario
+    cursor = notifications_collection.find({
+        "creation_date": {"$gte": user_creation_date}
+    }).sort("creation_date", -1).limit(100)
+
+    notifications = await cursor.to_list(length=100)
+
+    # Serializar notificaciones
+    serializable = []
+    for notif in notifications:
+        notif['_id'] = str(notif['_id'])
+        if 'client_id' in notif and isinstance(notif['client_id'], ObjectId):
+            notif['client_id'] = str(notif['client_id'])
+        serializable.append(notif)
+
+    # Calcular cuántas no han sido leídas por ese usuario
+    unread_count = sum(
+        1 for notif in serializable if user_id not in notif.get("read_by", [])
+    )
+
+    return {
+        "notifications": serialize_notifications(serializable),
+        "unread_count": unread_count
+    }
+
+
