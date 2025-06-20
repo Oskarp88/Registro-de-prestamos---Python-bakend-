@@ -15,10 +15,7 @@ print("🌐 ENV:", os.getenv("ENV"))
 print("🔐 MONGO_URL:", "Present" if MONGO_URL else "Missing")
 print("📂 DATABASE_NAME:", DATABASE_NAME)
 
-client = motor.motor_asyncio.AsyncIOMotorClient(
-    MONGO_URL,
-    tls=True,
-)
+client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
 
 database = client[DATABASE_NAME]
 
