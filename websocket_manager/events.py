@@ -1,8 +1,7 @@
 
 
 from json import dumps
-from fastapi.encoders import jsonable_encoder
-from database.connection import get_db
+from database.connection import database
 from utils.constants import Constants
 from utils.erialize_notifications import serialize_notifications
 from websocket_manager.manager import manager
@@ -12,7 +11,7 @@ from bson import ObjectId
 
 async def notify_latest_notifications():
     print(f"🔔 Ejecutando notify_latest_notifications() {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    db = get_db()
+    db = database
     notifications_collection = db[Constants.NOTIFICATIONS]
     print(f"📡 Notificando a {len(manager.client_sockets)} sockets activos")
     for user_id, socket in manager.client_sockets.items():
