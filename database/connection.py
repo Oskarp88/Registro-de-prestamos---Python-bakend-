@@ -8,10 +8,10 @@ if os.getenv("ENV") != "production":
 from utils.constants import Constants
 
 MONGO_URL = os.getenv(Constants.MONGO_URL)
-DATABASE_NAME = os.getenv(Constants.DATABASE_NAME)
+# DATABASE_NAME = os.getenv(Constants.DATABASE_NAME)
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
-database = client[DATABASE_NAME]
+database = client.get_default_database()
 
 def get_db():
     return database
