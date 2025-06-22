@@ -29,6 +29,14 @@ async def create_loan(loan_data: LoanCreate):
     # Calcular interés del 15%
     interest = round(loan_data.total_loan * 0.15, 2)
 
+    due_date = datetime.strptime(loan_data.due_date, "%Y-%m-%d").date()
+    today = datetime.utcnow().date()
+
+    if due_date < today:
+        raise HTTPException(status_code=400, detail="La fecha de vencimiento no puede estar en el pasado.")
+
+    new_day_count = (due_date - today).days
+
     # Crear documento de deuda
     loan_dict = loan_data.dict()
     loan_dict[Constants.CLIENT_ID] = ObjectId(loan_data.client_id)
@@ -36,8 +44,8 @@ async def create_loan(loan_data: LoanCreate):
     loan_dict[Constants.TOTAL_LOAN] = loan_data.total_loan
     loan_dict[Constants.INTEREST] = interest
     loan_dict[Constants.PAYMENT_AMOUNT] = loan_data.payment_amount
-    # loan_dict["creation_date"] = datetime.utcnow()
     loan_dict[Constants.STATUS] = Constants.PENDIENTE
+    loan_dict[Constants.DAY] = new_day_count
     loan_dict[Constants.HISTORY] = []
 
     result = await loans_collection.insert_one(loan_dict)
@@ -71,7 +79,7 @@ async def create_loan(loan_data: LoanCreate):
     await notify_latest_notifications()
 
     return loan_dict
-
+  
 async def update_loan(loan_data: LoanCreate):
     db = database
     loans_collection = db[Constants.LOANS]
@@ -91,6 +99,14 @@ async def update_loan(loan_data: LoanCreate):
     # Calcular interés del 15%
     interest = round(loan_data.total_loan * 0.15, 2)
 
+    due_date = datetime.strptime(loan_data.due_date, "%Y-%m-%d").date()
+    today = datetime.utcnow().date()
+
+    if due_date < today:
+        raise HTTPException(status_code=400, detail="La fecha de vencimiento no puede estar en el pasado.")
+
+    new_day_count = (due_date - today).days
+
     await loans_collection.update_one(
         {Constants.CLIENT_ID: ObjectId(loan_data.client_id)},
         {
@@ -101,7 +117,8 @@ async def update_loan(loan_data: LoanCreate):
                 Constants.STATUS: Constants.PENDIENTE, 
                 Constants.CREATION_DATE: datetime.utcnow(),
                 Constants.DUE_DATE: loan_data.due_date,
-                Constants.INTEREST_10: True
+                Constants.INTEREST_10: True,
+                Constants.DAY: new_day_count
             },
         }
     )

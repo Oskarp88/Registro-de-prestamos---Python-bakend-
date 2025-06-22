@@ -30,7 +30,7 @@ scheduler = AsyncIOScheduler()
 @app.on_event("startup")
 async def startup_event():
     # Job liviano para "mantener vivo" el servidor cada 15 min
-    scheduler.add_job(lambda: print("🟢 Reactivando servidor..."), 'interval', minutes=15)
+    scheduler.add_job(lambda: print("🟢 Reactivando servidor..."), 'interval', minutes=10)
 
     # Job pesado para update de préstamos cada 6 horas
     scheduler.add_job(update_loans_status, 'interval', hours=6)
