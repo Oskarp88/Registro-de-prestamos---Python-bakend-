@@ -1,4 +1,4 @@
-from fastapi import FastAPI, logger
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from controllers.loan_controller import update_loans_status
 from routes.routes import api_router
@@ -7,7 +7,9 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 from websocket_manager.router_socket import ws_router
 import os
+import logging
 
+logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
     title="API de Préstamos",
@@ -48,6 +50,10 @@ async def startup_event():
 @app.get("/")
 def root():
     return {"message": "🚀 API de Préstamos activa"}
+
+@app.get("/ping")
+async def ping():
+    return {"status": "alive"}
 
 if os.getenv("ENV") != "production":
     import uvicorn
