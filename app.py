@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, logger
 from fastapi.middleware.cors import CORSMiddleware
 from controllers.loan_controller import update_loans_status
 from routes.routes import api_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
 from websocket_manager.router_socket import ws_router
 import os
 
@@ -29,11 +31,16 @@ scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 async def startup_event():
-    # Job liviano para "mantener vivo" el servidor cada 15 min
-    scheduler.add_job(lambda: print("🟢 Reactivando servidor..."), 'interval', minutes=10)
+    # Inicializa el scheduler con la zona horaria de Colombia
+    bogota_tz = pytz.timezone("America/Bogota")
+    scheduler.configure(timezone=bogota_tz)
 
-    # Job pesado para update de préstamos cada 6 horas
-    scheduler.add_job(update_loans_status, 'interval', hours=6)
+    # Job liviano para mantener vivo el servidor cada 10 min
+    scheduler.add_job(lambda: logger.info("🟢 Reactivando servidor..."), 'interval', minutes=10)
+
+    # Job diario a las 4 a.m. hora de Colombia
+    trigger = CronTrigger(hour=4, minute=0, timezone=bogota_tz)
+    scheduler.add_job(update_loans_status, trigger)
 
     scheduler.start()
     print("✅ Scheduler iniciado correctamente")
