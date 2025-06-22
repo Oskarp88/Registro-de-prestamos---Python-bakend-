@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from database.connection import database
 from schemas.historyCapital import HistoryCapitalCreate
 from schemas.historyGanancias import HistoryGananciasCreate
-from schemas.loan_schema import LoanCreate, PaymentHistoryItem
+from schemas.loan_schema import LoanCreate
 from bson import ObjectId
 from datetime import datetime, timedelta
 from calendar import calendar, monthrange
@@ -236,6 +236,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
             },
             "$push": {
                 Constants.HISTORY: {
+                    Constants.TOTAL_LOAN: loan[Constants.TOTAL_LOAN],
                     Constants.DATE: datetime.utcnow(),
                     Constants.STATUS: message,
                     Constants.DUE_DATE: current_due_date_str,
