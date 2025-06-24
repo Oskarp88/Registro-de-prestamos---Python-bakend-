@@ -18,6 +18,8 @@ class Constants:
 
     #loan
     TOTAL_LOAN = 'total_loan'
+    TOTAL_LOAN_HISTORY = 'total_loan_history'
+    TOTAL_INTEREST_HISTORY = 'total_interest_history'
     DUE_DATE = 'due_date'
     PAYMENT_AMOUNT = 'payment_amount'
     STATUS = 'status'
@@ -42,6 +44,8 @@ class Constants:
     
     GANANCIAS = 'ganancias'
     CAPITAL = 'capital'
+    HISTORY_CAPITAL = 'history_capital'
+    HISTORY_INTEREST = 'history_interest'
     MESSAGE = 'message' 
     PAID_INTEREST = 'paid_interest'
     BASE_URL = 'BASE_URL'

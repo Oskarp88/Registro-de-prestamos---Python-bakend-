@@ -14,11 +14,13 @@ class PaymentHistoryItem(BaseModel):
 class LoanCreate(BaseModel):
     client_id: str
     total_loan: float
+    total_loan_history: float
+    total_interest_history: float
     name: str
     interest: Optional[float] = None  # se calculará como 15% del total_loan
     payment_amount: Optional[float] = 0.0  # si abona algo
     creation_date: datetime = Field(default_factory=datetime.utcnow)
-    due_date: str  # fecha donde pagará la primera cuota
+    due_date: str  # fecha donde pagará la cuota
     status: str = "pendiente"
     history: List[PaymentHistoryItem] = []
     interest10: bool = True

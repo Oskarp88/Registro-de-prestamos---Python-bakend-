@@ -42,6 +42,8 @@ async def create_loan(loan_data: LoanCreate):
     loan_dict[Constants.CLIENT_ID] = ObjectId(loan_data.client_id)
     loan_dict[Constants.NAME] = loan_data.name
     loan_dict[Constants.TOTAL_LOAN] = loan_data.total_loan
+    loan_dict[Constants.TOTAL_LOAN_HISTORY] = loan_data.total_loan
+    loan_dict[Constants.TOTAL_INTEREST_HISTORY] = 0
     loan_dict[Constants.INTEREST] = interest
     loan_dict[Constants.PAYMENT_AMOUNT] = loan_data.payment_amount
     loan_dict[Constants.STATUS] = Constants.PENDIENTE
@@ -110,8 +112,12 @@ async def update_loan(loan_data: LoanCreate):
     await loans_collection.update_one(
         {Constants.CLIENT_ID: ObjectId(loan_data.client_id)},
         {
+            "$inc": {
+                Constants.TOTAL_LOAN_HISTORY: loan_data.total_loan
+            },
             "$set": {
                 Constants.TOTAL_LOAN: loan_data.total_loan,
+                Constants.TOTAL_INTEREST_HISTORY: loan[Constants.TOTAL_INTEREST_HISTORY],
                 Constants.INTEREST: interest,
                 Constants.PAYMENT_AMOUNT: 0,
                 Constants.STATUS: Constants.PENDIENTE, 
@@ -231,6 +237,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
         {
             "$set": {
                 Constants.STATUS: status, 
+                Constants.TOTAL_INTEREST_HISTORY: loan[Constants.TOTAL_INTEREST_HISTORY] + paid_interest,
                 Constants.DUE_DATE: new_due_date_str,
                 Constants.INTEREST_10: False
             },
@@ -252,7 +259,8 @@ async def update_interest_payment(client_id: str, paid_interest: float):
         {},  # Sin filtro → actualiza el unico documento, solo si hay un solo documento
         {
             "$inc": {
-                Constants.GANANCIAS: paid_interest
+                Constants.GANANCIAS: paid_interest,
+                Constants.HISTORY_INTEREST: paid_interest
             }
         }
     )
@@ -260,7 +268,7 @@ async def update_interest_payment(client_id: str, paid_interest: float):
      # Crear registro en historial
     history_record_ganancias = HistoryGananciasCreate(
         amount=paid_interest,
-        state=Constants.INTEREST,
+        state= Constants.INTEREST,
         client_name=loan[Constants.NAME] 
     )
 
@@ -389,11 +397,15 @@ async def update_full_payment(client_id: str):
 
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found for this client")
-
+    
+    interest_payment = loan[Constants.TOTAL_LOAN] * 0.1
     # Actualizar loan
     await loans_collection.update_one(
         {Constants.CLIENT_ID: ObjectId(client_id)},
         {
+            "$inc":{
+                Constants.TOTAL_INTEREST_HISTORY: interest_payment
+            },
             "$set": {
                 Constants.STATUS: Constants.DEUDA_COMPLETA_PAGADA, 
                 Constants.INTEREST: 0,
@@ -406,17 +418,18 @@ async def update_full_payment(client_id: str):
                     Constants.TOTAL_LOAN: loan[Constants.TOTAL_LOAN],
                     Constants.STATUS: Constants.DEUDA_COMPLETA_PAGADA,
                     Constants.DUE_DATE: loan[Constants.DUE_DATE],
-                    Constants.INTEREST_PAYMENT: loan[Constants.TOTAL_LOAN] * 0.1,
+                    Constants.INTEREST_PAYMENT: interest_payment,
                     Constants.AMOUNT_PAYMENT: loan[Constants.TOTAL_LOAN]
                 }
             }
         }
     )
-
+      
     await accounts_collection.update_one({}, {
         "$inc": {
             Constants.CAPITAL: loan[Constants.TOTAL_LOAN],
-            Constants.GANANCIAS: loan[Constants.TOTAL_LOAN] * 0.1
+            Constants.GANANCIAS: interest_payment,
+            Constants.HISTORY_INTEREST: interest_payment
         }
     })
 

@@ -13,7 +13,14 @@ async def add_capital(amount: float):
     history_capital_collection = db[Constants.HISTORY_CAPITAL]
 
     # Actualizar capital
-    result = await accounts_collection.update_one({}, {"$inc": {Constants.CAPITAL: amount}})
+    result = await accounts_collection.update_one({},
+        {
+           "$inc": {
+               Constants.CAPITAL: amount,
+               Constants.HISTORY_CAPITAL: amount
+            }
+        }
+    )
     if result.modified_count == 0:
         raise HTTPException(status_code=500, detail="No se pudo actualizar capital.")
 
@@ -31,7 +38,8 @@ async def add_capital(amount: float):
     return {
         Constants.MESSAGE: "Capital agregado con éxito",
         Constants.CAPITAL: new_data[Constants.CAPITAL],
-        Constants.GANANCIAS: new_data[Constants.GANANCIAS]
+        Constants.GANANCIAS: new_data[Constants.GANANCIAS],
+        Constants.HISTORY_CAPITAL: new_data[Constants.HISTORY_CAPITAL]
     }
 # Retirar ganancias
 async def withdraw_ganancias(amount: float):
