@@ -25,17 +25,24 @@ async def create_loan(loan_data: LoanCreate):
     if not client:
         raise HTTPException(status_code=400, detail="El préstamo no puede ser creado")
 
-
-    # Calcular interés del 15%
-    interest = round(loan_data.total_loan * 0.15, 2)
-
-    due_date = datetime.strptime(loan_data.due_date, "%Y-%m-%d").date()
+    # Obtener fecha actual
     today = datetime.utcnow().date()
+    current_day = today.day
+    _, last_day_of_month = monthrange(today.year, today.month)
 
+    # Calcular días restantes del mes
+    new_day_count = last_day_of_month - current_day
+
+    # Calcular interés
+    if current_day >= 28:  # 28, 29, 30 o 31
+        interest = round(loan_data.total_loan * 0.15, 2)
+    else:
+        interest = round((loan_data.total_loan * 0.15 / 30) * (30 - current_day), 2)
+
+    # Validar fecha de vencimiento
+    due_date = datetime.strptime(loan_data.due_date, "%Y-%m-%d").date()
     if due_date < today:
         raise HTTPException(status_code=400, detail="La fecha de vencimiento no puede estar en el pasado.")
-
-    new_day_count = (due_date - today).days
 
     # Crear documento de deuda
     loan_dict = loan_data.dict()
@@ -58,22 +65,20 @@ async def create_loan(loan_data: LoanCreate):
         }
     })
 
-    # Crear registro en historial
+    # Crear historial
     history_record = HistoryCapitalCreate(
         amount=loan_data.total_loan,
-        state= Constants.PRESTAMO,
+        state=Constants.PRESTAMO,
         client_name=loan_data.name 
     )
-
     await history_capital_collection.insert_one(history_record.dict())
 
+    # Crear notificación
     loan_dict["_id"] = str(result.inserted_id)
     loan_dict[Constants.CLIENT_ID] = str(loan_dict[Constants.CLIENT_ID])
 
     notifications_record = Notifications(
-        message=(
-            f"Se ha otorgado al cliente {loan_data.name} un préstamo por un monto de {format_currency_value(loan_data.total_loan)}."
-        ),
+        message=f"Se ha otorgado al cliente {loan_data.name} un préstamo por un monto de {format_currency_value(loan_data.total_loan)}.",
         client_id=loan_data.client_id
     )
 
@@ -81,7 +86,7 @@ async def create_loan(loan_data: LoanCreate):
     await notify_latest_notifications()
 
     return loan_dict
-  
+
 async def update_loan(loan_data: LoanCreate):
     db = database
     loans_collection = db[Constants.LOANS]
