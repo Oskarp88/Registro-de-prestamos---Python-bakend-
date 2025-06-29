@@ -44,7 +44,7 @@ class Constants:
     
     GANANCIAS = 'ganancias'
     CAPITAL = 'capital'
-    HISTORY_CAPITAL = 'history_capital'
+    HISTORY_CAPITAL_TOTAL = 'history_capital'
     HISTORY_INTEREST = 'history_interest'
     MESSAGE = 'message' 
     PAID_INTEREST = 'paid_interest'

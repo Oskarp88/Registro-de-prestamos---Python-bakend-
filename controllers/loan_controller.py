@@ -86,7 +86,7 @@ async def create_loan(loan_data: LoanCreate):
     await notify_latest_notifications()
 
     return loan_dict
-
+  
 async def update_loan(loan_data: LoanCreate):
     db = database
     loans_collection = db[Constants.LOANS]
@@ -334,7 +334,7 @@ async def update_payment(client_id: str, payment_amount: float):
             },
             "$push": {
                 Constants.HISTORY: {
-                    Constants.TOTAL_LOAN: new_total_loan,
+                    Constants.TOTAL_LOAN: loan[Constants.TOTAL_LOAN],
                     Constants.DATE: datetime.utcnow(),
                     Constants.STATUS: Constants.DEUDA_FINALIZADA if new_total_loan == 0 else Constants.ABONO,
                     Constants.DUE_DATE: current_due_date_str,
@@ -434,7 +434,7 @@ async def update_full_payment(client_id: str):
         "$inc": {
             Constants.CAPITAL: loan[Constants.TOTAL_LOAN],
             Constants.GANANCIAS: interest_payment,
-            Constants.HISTORY_INTEREST: interest_payment
+            Constants.HISTORY_INTEREST: interest_payment,
         }
     })
 
@@ -464,7 +464,8 @@ async def update_full_payment(client_id: str):
     return {
         Constants.MESSAGE: "Pago procesado exitoso", 
         Constants.STATUS: Constants.DEUDA_COMPLETA_PAGADA, 
-        Constants.HISTORY: updated_loan[Constants.HISTORY]
+        Constants.HISTORY: updated_loan[Constants.HISTORY],
+        Constants.INTEREST_PAYMENT: interest_payment,
     }
 
 async def get_pending_loans_with_total_interest(): 

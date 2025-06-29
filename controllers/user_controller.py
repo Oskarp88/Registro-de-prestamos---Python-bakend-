@@ -134,7 +134,9 @@ async def get_accounts():
     return {
         Constants.CAPITAL: accounts[Constants.CAPITAL],
         Constants.ADMIN: accounts[Constants.ADMIN],
-        Constants.GANANCIAS: accounts[Constants.GANANCIAS]
+        Constants.GANANCIAS: accounts[Constants.GANANCIAS],
+        Constants.TOTAL_INTEREST: accounts[Constants.HISTORY_INTEREST],
+        Constants.HISTORY_CAPITAL_TOTAL: accounts[Constants.HISTORY_CAPITAL_TOTAL]
     }
 
 async def update_accounts(capital: float):
