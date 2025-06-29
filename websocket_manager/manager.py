@@ -15,7 +15,6 @@ class ConnectionManager:
             del self.client_sockets[client_id]
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
-        print(f'llegue a send {message}')
         await websocket.send_text(message)
 
 manager = ConnectionManager()
