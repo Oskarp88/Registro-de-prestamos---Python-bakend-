@@ -466,6 +466,7 @@ async def update_full_payment(client_id: str):
         Constants.STATUS: Constants.DEUDA_COMPLETA_PAGADA, 
         Constants.HISTORY: updated_loan[Constants.HISTORY],
         Constants.INTEREST_PAYMENT: interest_payment,
+        Constants.TOTAL_LOAN: loan[Constants.TOTAL_LOAN]
     }
 
 async def get_pending_loans_with_total_interest(): 
