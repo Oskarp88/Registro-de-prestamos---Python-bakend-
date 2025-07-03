@@ -53,6 +53,7 @@ def root():
 
 @app.get("/ping")
 async def ping():
+    logger.info("🟢 Reactivando servidor...")
     return {"status": "alive"}
 
 if os.getenv("ENV") != "production":
